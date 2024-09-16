@@ -7,6 +7,6 @@ services:
     ports:
       - "80:80" # Expose FastAPI app on port 80
     volumes:
-      - ./app:/app # Mount the current app directory to the container's /app directory
-      - ./db:/app/db # Mount the SQLite database directory
+      - ./:/app  # Mount the current directory (with Dockerfile, main.py, etc.) to the container's /app directory
+      - ./db:/app/db  # Mount the SQLite database directory
     restart: always

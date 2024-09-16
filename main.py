@@ -18,10 +18,13 @@ Base.metadata.create_all(bind=engine)
 async def tilda_order_webhook(request: Request, db: Session = Depends(get_db)):
     try:
         # Parse the incoming JSON data
-        data = await request.json()
+        customer_data = await request.json()
+        
+        formatted_data = json.dumps(customer_data, indent=4)
+        print(formatted_data)  # This will print formatted JSON to the terminal
+        
 
         # Extract customer information
-        customer_data = data[0]
         name = customer_data["Name"]
         phone = customer_data["Phone"]
         email = customer_data["Email"]
