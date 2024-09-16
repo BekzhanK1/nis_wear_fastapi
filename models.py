@@ -30,9 +30,8 @@ class Customer(Base):
 class Order(Base):
     __tablename__ = "orders"
 
-    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(String(50), primary_key=True, index=True)
     customer_id = Column(Integer, ForeignKey("customers.id"))
-    order_id = Column(String(50))
     payment_system = Column(String(50))
     status = Column(Enum(StatusEnum), default=StatusEnum.new)
     total_amount = Column(DECIMAL(10, 2))
@@ -47,7 +46,7 @@ class Product(Base):
     __tablename__ = "products"
 
     id = Column(Integer, primary_key=True, index=True)
-    order_id = Column(Integer, ForeignKey("orders.id"))
+    order_id = Column(Integer, ForeignKey("orders.order_id"))
     name = Column(String(255))
     sku = Column(String(50))
     price = Column(DECIMAL(10, 2))
@@ -62,7 +61,7 @@ class ProductOption(Base):
     __tablename__ = "product_options"
 
     id = Column(Integer, primary_key=True, index=True)
-    product_id = Column(Integer, ForeignKey("products.id"))
+    product_id = Column(Integer, ForeignKey("products.order_id"))
     option_name = Column(String(255))
     variant = Column(String(255))
 

@@ -52,7 +52,6 @@ class CustomerSchema(BaseModel):
 
 # Schema for Order
 class OrderSchema(BaseModel):
-    id: int
     order_id: str
     payment_system: str
     status: StatusEnum

@@ -19,10 +19,9 @@ async def tilda_order_webhook(request: Request, db: Session = Depends(get_db)):
     try:
         # Parse the incoming JSON data
         customer_data = await request.json()
-        
+
         formatted_data = json.dumps(customer_data, indent=4)
         print(formatted_data)  # This will print formatted JSON to the terminal
-        
 
         # Extract customer information
         name = customer_data["Name"]
@@ -48,7 +47,7 @@ async def tilda_order_webhook(request: Request, db: Session = Depends(get_db)):
         # Create the order
         order = Order(
             customer_id=customer.id,
-            order_id=order_id,
+            order_id=order_id,  # use order_id instead of id
             payment_system=payment_system,
             total_amount=total_amount,
             form_id=form_id,
@@ -68,7 +67,7 @@ async def tilda_order_webhook(request: Request, db: Session = Depends(get_db)):
 
             # Create the product
             product = Product(
-                order_id=order.id,
+                order_id=order.order_id,  # Use order_id instead of id
                 name=product_name,
                 sku=sku,
                 price=price,
@@ -111,7 +110,7 @@ def get_orders(db: Session = Depends(get_db)):
 @app.get("/orders/{order_id}", response_model=OrderSchema)
 def get_order(order_id: int, db: Session = Depends(get_db)):
     """Get a single order by ID with customer and product details"""
-    order = db.query(Order).filter(Order.id == order_id).first()
+    order = db.query(Order).filter(Order.order_id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     return order
