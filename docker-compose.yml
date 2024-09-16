@@ -1,0 +1,12 @@
+version: "3.7"
+
+services:
+  fastapi-app:
+    build: .
+    container_name: fastapi-app
+    ports:
+      - "80:80" # Expose FastAPI app on port 80
+    volumes:
+      - ./app:/app # Mount the current app directory to the container's /app directory
+      - ./db:/app/db # Mount the SQLite database directory
+    restart: always
