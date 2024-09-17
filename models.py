@@ -1,8 +1,10 @@
 # models.py
-from sqlalchemy import Column, Integer, String, ForeignKey, DECIMAL, Enum
+from datetime import datetime, timedelta
+from sqlalchemy import Column, DateTime, Integer, String, ForeignKey, DECIMAL, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 import enum
+from passlib.context import CryptContext
 
 Base = declarative_base()
 
@@ -14,6 +16,23 @@ class StatusEnum(enum.Enum):
     shipped = "shipped"
     delivered = "delivered"
     canceled = "canceled"
+
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True, index=True)
+    hashed_password = Column(String(255))
+
+    def verify_password(self, password: str):
+        return pwd_context.verify(password, self.hashed_password)
+
+    def hash_password(self, password: str):
+        self.hashed_password = pwd_context.hash(password)
 
 
 class Customer(Base):
@@ -66,3 +85,14 @@ class ProductOption(Base):
     variant = Column(String(255))
 
     product = relationship("Product", back_populates="options")
+
+
+class StatusChange(Base):
+    __tablename__ = "status_changes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(String(50), ForeignKey("orders.order_id"))
+    status = Column(Enum(StatusEnum))
+    created_at = Column(
+        DateTime, default=lambda: datetime.utcnow() + timedelta(hours=5)
+    )

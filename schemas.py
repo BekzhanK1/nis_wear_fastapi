@@ -1,5 +1,5 @@
 # schemas.py
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 from enum import Enum
 from decimal import Decimal
@@ -63,3 +63,16 @@ class OrderSchema(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class UserSchema(BaseModel):
+    username: str
+
+    class Config:
+        orm_mode = True
+
+
+class EmailSchema(BaseModel):
+    email: EmailStr
+    subject: str
+    body: str
