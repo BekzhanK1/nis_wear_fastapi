@@ -1,6 +1,15 @@
 # models.py
 from datetime import datetime, timedelta
-from sqlalchemy import Column, DateTime, Integer, String, ForeignKey, DECIMAL, Enum
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Integer,
+    String,
+    ForeignKey,
+    DECIMAL,
+    Enum,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 import enum
@@ -59,6 +68,7 @@ class Order(Base):
 
     customer = relationship("Customer", back_populates="orders")
     products = relationship("Product", back_populates="order")
+    status_changes = relationship("StatusChange", back_populates="order")
 
 
 class Product(Base):
@@ -71,6 +81,7 @@ class Product(Base):
     price = Column(DECIMAL(10, 2))
     quantity = Column(Integer)
     amount = Column(DECIMAL(10, 2))
+    is_assembled = Column(Boolean, default=False)
 
     order = relationship("Order", back_populates="products")
     options = relationship("ProductOption", back_populates="product")
@@ -80,7 +91,7 @@ class ProductOption(Base):
     __tablename__ = "product_options"
 
     id = Column(Integer, primary_key=True, index=True)
-    product_id = Column(Integer, ForeignKey("products.order_id"))
+    product_id = Column(Integer, ForeignKey("products.id"))
     option_name = Column(String(255))
     variant = Column(String(255))
 
@@ -96,3 +107,5 @@ class StatusChange(Base):
     created_at = Column(
         DateTime, default=lambda: datetime.utcnow() + timedelta(hours=5)
     )
+
+    order = relationship("Order", back_populates="status_changes")

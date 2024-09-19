@@ -1,4 +1,5 @@
 # schemas.py
+from datetime import datetime
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 from enum import Enum
@@ -33,6 +34,7 @@ class ProductSchema(BaseModel):
     price: Decimal
     quantity: int
     amount: Decimal
+    is_assembled: bool
     options: List[ProductOptionSchema] = []
 
     class Config:
@@ -45,6 +47,15 @@ class CustomerSchema(BaseModel):
     name: str
     phone: str
     email: str
+
+    class Config:
+        orm_mode = True
+
+
+class StatusChangeSchema(BaseModel):
+    id: int
+    status: StatusEnum
+    created_at: datetime
 
     class Config:
         orm_mode = True
@@ -76,3 +87,14 @@ class EmailSchema(BaseModel):
     email: EmailStr
     subject: str
     body: str
+
+
+class TrackOrderSchema(BaseModel):
+    order_id: str
+    status: StatusEnum
+    total_amount: Decimal
+    products: List[ProductSchema] = []
+    status_changes: List[StatusChangeSchema] = []
+
+    class Config:
+        orm_mode = True

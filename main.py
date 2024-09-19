@@ -6,6 +6,7 @@ from fastapi import FastAPI, Depends, HTTPException, Request, status, Background
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError
 from sqlalchemy.orm import Session
+from fastapi.middleware.cors import CORSMiddleware
 from auth import (
     create_access_token,
     decode_access_token,
@@ -24,7 +25,7 @@ from models import (
 )
 from database import SessionLocal, engine, get_db
 import json
-from schemas import OrderSchema, UserSchema
+from schemas import OrderSchema, ProductSchema, TrackOrderSchema, UserSchema
 from typing import List
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 
@@ -32,6 +33,14 @@ load_dotenv()
 
 # Initialize the FastAPI app
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # The frontend origin you want to allow
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all HTTP methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allows all headers
+)
 
 # Create the tables in the database
 Base.metadata.create_all(bind=engine)
@@ -233,4 +242,42 @@ async def update_order(
         )
 
     print(f"Order {order_id} updated to status: {status}")
+    return order
+
+
+@app.patch("/products/{product_id}", response_model=ProductSchema)
+def assemble_product(
+    product_id: int,
+    assemble: bool,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    product.is_assembled = assemble
+    db.commit()
+    db.refresh(product)
+    return product
+
+
+@app.get("/order-tracking/{order_id}", response_model=TrackOrderSchema)
+def track_order(order_id: int, db: Session = Depends(get_db)):
+    order = db.query(Order).filter(Order.order_id == order_id).first()
+
+    if not order:
+        return {"detail": "Order not found"}
+
+    # Query all status changes for this order
+    # status_changes = (
+    #     db.query(StatusChange).filter(StatusChange.order_id == order_id).all()
+    # )
+
+    # # Attach status changes to the response
+    # return {
+    #     "order_id": order.order_id,
+    #     "status": order.status,
+    #     "total_amount": order.total_amount,
+    #     "status_changes": status_changes,
+    # }
     return order
