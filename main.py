@@ -1,7 +1,8 @@
 # main.py
+from collections import defaultdict
 import os
 from dotenv import load_dotenv
-from datetime import timedelta
+from datetime import datetime, timedelta
 from fastapi import FastAPI, Depends, HTTPException, Request, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError
@@ -25,9 +26,17 @@ from models import (
 )
 from database import SessionLocal, engine, get_db
 import json
-from schemas import OrderSchema, ProductSchema, TrackOrderSchema, UserSchema
+from schemas import (
+    EmailSchema,
+    OrderSchema,
+    ProductSchema,
+    TrackOrderSchema,
+    UserSchema,
+)
 from typing import List
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
+
+from utils import get_next_shipping_day
 
 load_dotenv()
 
@@ -112,6 +121,9 @@ async def tilda_order_webhook(request: Request, db: Session = Depends(get_db)):
         total_amount = payment_data["amount"]
         form_id = customer_data["formid"]
         form_name = customer_data["formname"]
+        order_date = datetime.now()
+
+        shipping_date = get_next_shipping_day(order_date)
 
         order = Order(
             customer_id=customer.id,
@@ -120,6 +132,7 @@ async def tilda_order_webhook(request: Request, db: Session = Depends(get_db)):
             total_amount=total_amount,
             form_id=form_id,
             form_name=form_name,
+            shipping_date=shipping_date,
         )
         db.add(order)
         status_change = StatusChange(order_id=order.order_id, status=StatusEnum.new)
@@ -175,13 +188,23 @@ async def get_orders(
     return orders
 
 
-@app.get("/orders/{order_id}", response_model=OrderSchema)
-async def get_order(order_id: int, db: Session = Depends(get_db)):
-    """Get a single order by ID with customer and product details"""
-    order = db.query(Order).filter(Order.order_id == order_id).first()
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-    return order
+@app.get("/orders/", response_model=List[OrderSchema])
+async def get_orders(
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+):
+    """Get all orders grouped by shipping date"""
+    orders = db.query(Order).all()
+
+    # Group orders by shipping date
+    grouped_orders = defaultdict(list)
+    for order in orders:
+        grouped_orders[order.shipping_date].append(order)
+
+    # Convert the grouped orders dictionary to a list format
+    return [
+        {"shipping_date": shipping_date, "orders": order_list}
+        for shipping_date, order_list in grouped_orders.items()
+    ]
 
 
 @app.patch("/orders/{order_id}", response_model=OrderSchema)
@@ -268,16 +291,26 @@ def track_order(order_id: int, db: Session = Depends(get_db)):
     if not order:
         return {"detail": "Order not found"}
 
-    # Query all status changes for this order
-    # status_changes = (
-    #     db.query(StatusChange).filter(StatusChange.order_id == order_id).all()
-    # )
-
-    # # Attach status changes to the response
-    # return {
-    #     "order_id": order.order_id,
-    #     "status": order.status,
-    #     "total_amount": order.total_amount,
-    #     "status_changes": status_changes,
-    # }
     return order
+
+
+@app.post("/send-email")
+def send_email(email: EmailSchema, background_tasks: BackgroundTasks):
+    message = MessageSchema(
+        subject=email.subject,
+        recipients=[email.email],
+        body=email.body,
+        subtype="html",
+    )
+
+    # Try to send the email, handle exceptions
+    try:
+        fm = FastMail(conf)
+        background_tasks.add_task(fm.send_message, message)
+        print(f"Email queued for {email.email}")
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to send email notification: {str(e)}"
+        )
+
+    return {"message": "Email sent successfully"}

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import (
     Boolean,
     Column,
+    Date,
     DateTime,
     Integer,
     String,
@@ -65,6 +66,7 @@ class Order(Base):
     total_amount = Column(DECIMAL(10, 2))
     form_id = Column(String(100))
     form_name = Column(String(100))
+    shipping_date = Column(Date)
 
     customer = relationship("Customer", back_populates="orders")
     products = relationship("Product", back_populates="order")

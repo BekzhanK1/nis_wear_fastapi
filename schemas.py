@@ -70,6 +70,7 @@ class OrderSchema(BaseModel):
     form_id: str
     form_name: str
     customer: CustomerSchema
+    shipping_date: datetime
     products: List[ProductSchema] = []
 
     class Config:
@@ -94,6 +95,7 @@ class TrackOrderSchema(BaseModel):
     status: StatusEnum
     total_amount: Decimal
     products: List[ProductSchema] = []
+    shipping_date: datetime
     status_changes: List[StatusChangeSchema] = []
 
     class Config:
