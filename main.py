@@ -100,6 +100,9 @@ async def read_users_me(
 async def tilda_order_webhook(request: Request, db: Session = Depends(get_db)):
     try:
         customer_data = await request.json()
+        if "test" in customer_data:
+            return {"status": "test"}
+            
 
         formatted_data = json.dumps(customer_data, indent=4)
         print(formatted_data)  # This will print formatted JSON to the terminal
@@ -176,6 +179,7 @@ async def tilda_order_webhook(request: Request, db: Session = Depends(get_db)):
         return {"status": "success"}
 
     except Exception as e:
+        print(str(e))
         raise HTTPException(status_code=400, detail=str(e))
 
 
