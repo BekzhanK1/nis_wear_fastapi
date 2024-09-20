@@ -7,10 +7,14 @@ from fastapi import Depends, HTTPException, status
 from models import User
 from database import get_db
 from sqlalchemy.orm import Session
+import os
+from dotenv import load_dotenv
 
-SECRET_KEY = "+143u$)iplu*z1z#jv$452e%x2mlnl7c8wqd&h$9_i4llr@)0!"
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
