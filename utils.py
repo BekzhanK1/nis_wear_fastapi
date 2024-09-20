@@ -6,7 +6,6 @@ def get_next_shipping_day(order_date: datetime) -> datetime:
     Calculate the next shipping Sunday, which occurs every two weeks starting from a known date.
     If the order is placed on a shipping day (Sunday), the order is moved to the next shipping day (two weeks later).
     """
-    order_date = order_date + timedelta(days=2)
     # Define the known start date for the shipping cycle (e.g., 2024-09-08)
     start_date = datetime(2024, 9, 8)  # A known shipping Sunday
 
