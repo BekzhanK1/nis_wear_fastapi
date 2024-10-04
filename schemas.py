@@ -66,6 +66,9 @@ class OrderSchema(BaseModel):
     order_id: str
     payment_system: str
     status: StatusEnum
+    school: str
+    grade: int
+    letter: str
     total_amount: Decimal
     form_id: str
     form_name: str
@@ -96,6 +99,7 @@ class TrackOrderSchema(BaseModel):
     total_amount: Decimal
     products: List[ProductSchema] = []
     shipping_date: datetime
+    school: str
     status_changes: List[StatusChangeSchema] = []
 
     class Config:

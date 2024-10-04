@@ -33,10 +33,10 @@ from schemas import (
     TrackOrderSchema,
     UserSchema,
 )
-from typing import List
+from typing import Any, Dict, List
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 
-from utils import get_next_shipping_day
+from utils import SCHOOLS, get_next_shipping_day
 
 load_dotenv()
 
@@ -102,7 +102,6 @@ async def tilda_order_webhook(request: Request, db: Session = Depends(get_db)):
         customer_data = await request.json()
         if "test" in customer_data:
             return {"status": "test"}
-            
 
         formatted_data = json.dumps(customer_data, indent=4)
         print(formatted_data)  # This will print formatted JSON to the terminal
@@ -110,13 +109,14 @@ async def tilda_order_webhook(request: Request, db: Session = Depends(get_db)):
         name = customer_data["Name"]
         phone = customer_data["Phone"]
         email = customer_data["Email"]
+        school = customer_data["school"]
+        grade = int(customer_data["grade"])
+        letter = customer_data["letter"]
 
-        customer = db.query(Customer).filter(Customer.email == email).first()
-        if not customer:
-            customer = Customer(name=name, phone=phone, email=email)
-            db.add(customer)
-            db.commit()
-            db.refresh(customer)
+        customer = Customer(name=name, phone=phone, email=email)
+        db.add(customer)
+        db.commit()
+        db.refresh(customer)
 
         payment_data = customer_data["payment"]
         order_id = payment_data["orderid"]
@@ -136,6 +136,9 @@ async def tilda_order_webhook(request: Request, db: Session = Depends(get_db)):
             form_id=form_id,
             form_name=form_name,
             shipping_date=shipping_date,
+            school=school,
+            grade=grade,
+            letter=letter,
         )
         db.add(order)
         status_change = StatusChange(order_id=order.order_id, status=StatusEnum.new)
@@ -185,30 +188,59 @@ async def tilda_order_webhook(request: Request, db: Session = Depends(get_db)):
 
 @app.get("/orders/", response_model=List[OrderSchema])
 async def get_orders(
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    shipping_date: str = None,
+    school: int = None,
+    grade: str = None,
+    letter: str = None,
+    payed: bool = None,
 ):
-    """Get all orders with customer and product details"""
-    orders = db.query(Order).all()
+    closest_shipping_date = get_next_shipping_day(datetime.now())
+    next_shipping_date = get_next_shipping_day(closest_shipping_date)
+    closest_shipping_date = closest_shipping_date.date()
+    next_shipping_date = next_shipping_date.date()
+
+    # Base query to get all orders
+    query = db.query(Order)
+
+    # Filter by shipping_date
+    if shipping_date:
+        if shipping_date == "closest":
+            query = query.filter(Order.shipping_date == closest_shipping_date)
+        elif shipping_date == "next":
+            query = query.filter(Order.shipping_date == next_shipping_date)
+        elif shipping_date == "previous":
+            query = query.filter(Order.shipping_date < closest_shipping_date)
+        else:
+            raise HTTPException(status_code=400, detail="Invalid shipping date filter")
+
+    if school:
+        query = query.filter(Order.school == SCHOOLS[school])
+
+    # Filter by grade
+    if grade:
+        query = query.filter(Order.grade == grade)
+
+    # Filter by grade and letter (if both are provided)
+    if letter:
+        if not grade:
+            raise HTTPException(
+                status_code=400, detail="Grade must be provided if filtering by letter"
+            )
+        query = query.filter(Order.grade == grade, Order.letter == letter)
+
+    if payed is not None:
+        if payed == True:
+            query = query.filter(Order.status != StatusEnum.new)
+        else:
+            query = query.filter(Order.status == StatusEnum.new)
+
+    # Execute query and get results
+    orders = query.all()
+
+    # Return the filtered list of orders
     return orders
-
-
-@app.get("/orders/", response_model=List[OrderSchema])
-async def get_orders(
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
-):
-    """Get all orders grouped by shipping date"""
-    orders = db.query(Order).all()
-
-    # Group orders by shipping date
-    grouped_orders = defaultdict(list)
-    for order in orders:
-        grouped_orders[order.shipping_date].append(order)
-
-    # Convert the grouped orders dictionary to a list format
-    return [
-        {"shipping_date": shipping_date, "orders": order_list}
-        for shipping_date, order_list in grouped_orders.items()
-    ]
 
 
 @app.patch("/orders/{order_id}", response_model=OrderSchema)
